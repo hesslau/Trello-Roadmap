@@ -26,6 +26,7 @@ THE SOFTWARE.
 <html>
 <head>
 <title>Swimlane using d3.js</title>
+<meta charset='utf-8'>
 	<!-- dependencies -->
 	<script src="js/jquery.min.js"></script>
 	<script src="js/d3.v3.min.js"></script>
@@ -57,7 +58,8 @@ THE SOFTWARE.
 
 		.miniItem0 {
 			fill: darksalmon;
-			stroke-width: 6;	
+			stroke-width: 2;	
+			stroke: gray;
 		}
 
 		.miniItem1 {
@@ -83,6 +85,8 @@ THE SOFTWARE.
 
 		<h3 id="status"></h3>
 		<h1 id="header"></h1>
+		<section id="roadmap"></section>
+		<div id="cardview"></div>
 		<script type="text/javascript">
 		var $scope = {};
 			
@@ -90,6 +94,7 @@ THE SOFTWARE.
 				// define some query objects
 				$scope.status = $('#status');
 				$scope.name = $('#header');
+				$scope.cardview = $('#cardview');
 
 				// get trello data and display roadmap when received
 				/*getDataFromTrello(function(cards) {
@@ -98,7 +103,7 @@ THE SOFTWARE.
 				});*/
 
 				// but lets get the roadmap working with local data first
-				$scope.cards = getDummyTrelloCards();
+				$scope.cards = getDummyTrelloCards(); 	// defined in keys.js
 				drawRoadmapFromTrelloCards($scope.cards);
 			})
 			

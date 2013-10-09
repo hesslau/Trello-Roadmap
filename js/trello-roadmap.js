@@ -126,7 +126,7 @@ function drawRoadmap(lanes, items, timeBegin, timeEnd) {
 		.domain([0, laneLength])
 		.range([0, miniHeight]);
 
-	var chart = d3.select("body")
+	var chart = d3.select("#roadmap")
 		.append("svg")
 		.attr("width", w + m[1] + m[3])
 		.attr("height", h + m[0] + m[2])
@@ -326,26 +326,55 @@ function drawRoadmap(lanes, items, timeBegin, timeEnd) {
 	}
 }
 
+function updateCardView(card) {
+	$scope.cardview.html(card.desc);
+}
 
 function drawRoadmapFromTrelloCards(cards, timeBegin, timeEnd) {
-	var lanes = ["4f82f81397d499ab414d7e36"];
-	// items 
+	cards = cards.filter(function(card) {
+		return card.due;
+	}) // only use cards that have a due date
+
+	var lanes = ["4f357259497d87255b0469e3"];
+	var items = cards; 
 
 	laneLength = lanes.length
 
-	if (timeBegin == null) timeBegin = 0;
-	if (timeEnd == null) timeEnd = 2000;
+	if (timeBegin == null) 
+		timeBegin = d3.min(cards, function(d) { return new Date(d.due); });
+	if (timeEnd == null) 
+		timeEnd = d3.max(cards, function(d) { return new Date(d.due); });
 
+
+	console.log(timeBegin, timeEnd);
 	var m = [20, 15, 15, 120], //top right bottom left
 		w = 960 - m[1] - m[3],
 		h = 500 - m[0] - m[2],
 		miniHeight = laneLength * 12 + 50,
 		mainHeight = h - miniHeight - 50;
 
+
+	var memberInLanes = function(card) {
+			for (i in card.idMembers) {
+				var index = lanes.indexOf(card.idMembers[i]);
+				if(index >= 0)
+					return index;
+			}
+		}
+
+	var start = function(card) {
+		return new Date(card.due).add(-10).days();
+
+	}
+
+	var end = function(card) {
+		return new Date(card.due)
+	}
+
 	//scales
-	var x = d3.scale.linear()
+	var x = d3.time.scale()
 		.domain([timeBegin, timeEnd])
-		.range([0, w]);
+		.range([10, w]);
 	var x1 = d3.scale.linear()
 		.range([0, w]);
 	var y1 = d3.scale.linear()
@@ -355,7 +384,14 @@ function drawRoadmapFromTrelloCards(cards, timeBegin, timeEnd) {
 		.domain([0, laneLength])
 		.range([0, miniHeight]);
 
-	var chart = d3.select("body")
+	var tooltip = d3.select("body")
+	.append("div")
+	.style("position", "absolute")
+	.style("z-index", "10")
+	.style("visibility", "hidden")
+	.text("a simple tooltip");
+
+	var chart = d3.select("#roadmap")
 		.append("svg")
 		.attr("width", w + m[1] + m[3])
 		.attr("height", h + m[0] + m[2])
@@ -381,15 +417,15 @@ function drawRoadmapFromTrelloCards(cards, timeBegin, timeEnd) {
 
 	//main lanes and texts
 	main.append("g").selectAll(".laneLines")
-		.data(items)
+		.data(cards)
 		.enter().append("line")
 		.attr("x1", m[1])
 		.attr("y1", function(d) {
-			return y1(d.lane);
+			return y1(memberInLanes(d));
 		})
 		.attr("x2", w)
 		.attr("y2", function(d) {
-			return y1(d.lane);
+			return y1(memberInLanes(d));
 		})
 		.attr("stroke", "lightgray")
 
@@ -409,15 +445,15 @@ function drawRoadmapFromTrelloCards(cards, timeBegin, timeEnd) {
 
 	//mini lanes and texts
 	mini.append("g").selectAll(".laneLines")
-		.data(items)
+		.data(cards)
 		.enter().append("line")
 		.attr("x1", m[1])
 		.attr("y1", function(d) {
-			return y2(d.lane);
+			return y2(memberInLanes(d));
 		})
 		.attr("x2", w)
 		.attr("y2", function(d) {
-			return y2(d.lane);
+			return y2(memberInLanes(d));
 		})
 		.attr("stroke", "lightgray");
 
@@ -443,34 +479,42 @@ function drawRoadmapFromTrelloCards(cards, timeBegin, timeEnd) {
 		.data(items)
 		.enter().append("rect")
 		.attr("class", function(d) {
-			return "miniItem" + d.lane;
+			return "miniItem" + memberInLanes(d);
 		})
 		.attr("x", function(d) {
-			return x(d.start);
+			return x(start(d));
 		})
 		.attr("y", function(d) {
-			return y2(d.lane + .5) - 5;
+			return y2(memberInLanes(d) + .5) - 5;
 		})
 		.attr("width", function(d) {
-			return x(d.end - d.start);
+			var diff = x(end(d)) - x(start(d));
+			console.log(x(end(d)),x(start(d)))
+			return diff;
 		})
-		.attr("height", 10);
+		.attr("height", 10)
+		.on("mouseover", function(d){
+			tooltip.text(d.name)
+			return tooltip.style("visibility", "visible");})
+		.on("mousemove", function(){return tooltip.style("top",
+    (d3.event.pageY-10)+"px").style("left",(d3.event.pageX+10)+"px");})
+		.on("mouseout", function(){return tooltip.style("visibility", "hidden");});
 
 	//mini labels
-	mini.append("g").selectAll(".miniLabels")
-		.data(items)
+	/*mini.append("g").selectAll(".miniLabels")
+		.data(cards)
 		.enter().append("text")
 		.text(function(d) {
-			return d.id;
+			return d.name;
 		})
 		.attr("x", function(d) {
-			return x(d.start);
+			return x(start(d));
 		})
 		.attr("y", function(d) {
-			return y2(d.lane + .5);
+			return y2(memberInLanes(d) + .5);
 		})
 		.attr("dy", ".5ex");
-
+	*/
 	//brush
 	var brush = d3.svg.brush()
 		.x(x)
@@ -483,14 +527,14 @@ function drawRoadmapFromTrelloCards(cards, timeBegin, timeEnd) {
 		.attr("y", 1)
 		.attr("height", miniHeight - 1);
 
-	display();
+	//display();
 
 	function display() {
 		var rects, labels,
 			minExtent = brush.extent()[0],
 			maxExtent = brush.extent()[1],
-			visItems = items.filter(function(d) {
-				return d.start < maxExtent && d.end > minExtent;
+			visItems = cards.filter(function(d) {
+				return start(d) < maxExtent && end(d) > minExtent;
 			});
 
 		mini.select(".brush")
@@ -504,24 +548,25 @@ function drawRoadmapFromTrelloCards(cards, timeBegin, timeEnd) {
 				return d.id;
 			})
 			.attr("x", function(d) {
-				return x1(d.start);
+				return x1(start(d));
 			})
 			.attr("width", function(d) {
-				return x1(d.end) - x1(d.start);
-			});
+				return x1(end(d)) - x1(start(d));
+			})
+			.on("mouseover", updateCardView);
 
 		rects.enter().append("rect")
 			.attr("class", function(d) {
-				return "miniItem" + d.lane;
+				return "miniItem" + memberInLanes(d);
 			})
 			.attr("x", function(d) {
-				return x1(d.start);
+				return x1(start(d));
 			})
 			.attr("y", function(d) {
-				return y1(d.lane) + 10;
+				return y1(memberInLanes(d)) + 10;
 			})
 			.attr("width", function(d) {
-				return x1(d.end) - x1(d.start);
+				return x1(end(d)) - x1(start(d));
 			})
 			.attr("height", function(d) {
 				return .8 * y1(1);
@@ -529,26 +574,26 @@ function drawRoadmapFromTrelloCards(cards, timeBegin, timeEnd) {
 
 		rects.exit().remove();
 
+
 		//update the item labels
 		labels = itemRects.selectAll("text")
 			.data(visItems, function(d) {
 				return d.id;
 			})
 			.attr("x", function(d) {
-				return x1(Math.max(d.start, minExtent) + 2);
+				return x1(Math.max(start(d), minExtent) + 2);
 			});
 
 		labels.enter().append("text")
 			.text(function(d) {
-				return d.id;
+				return d.name;
 			})
 			.attr("x", function(d) {
-				return x1(Math.max(d.start, minExtent));
+				return x1(Math.max(start(d), minExtent));
 			})
 			.attr("y", function(d) {
-				return y1(d.lane + .5);
-			})
-			.attr("text-anchor", "start");
+				return y1(memberInLanes(d) + .5);
+			});
 
 		labels.exit().remove();
 
