@@ -327,7 +327,8 @@ function drawRoadmap(lanes, items, timeBegin, timeEnd) {
 }
 
 function updateCardView(card) {
-	$scope.cardview.html(card.desc);
+	var converter = new Markdown.Converter();
+	$scope.cardview.html(converter.makeHtml(card.desc));
 }
 
 function drawRoadmapFromTrelloCards(cards, timeBegin, timeEnd) {
@@ -553,7 +554,11 @@ function drawRoadmapFromTrelloCards(cards, timeBegin, timeEnd) {
 			.attr("width", function(d) {
 				return x1(end(d)) - x1(start(d));
 			})
-			.on("mouseover", updateCardView);
+			.on("click", function(d) {
+				itemRects.selectAll("rect").classed("active",false);
+				d3.select(this).classed("active", true);
+				updateCardView(d);
+			});
 
 		rects.enter().append("rect")
 			.attr("class", function(d) {
