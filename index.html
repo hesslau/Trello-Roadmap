@@ -46,7 +46,7 @@ THE SOFTWARE.
 	<script src="bootstrap/js/bootstrap.min.js"></script>
 <style type="text/css">
 	body {
-		background: whitesmoke;
+		background: #efecd7;
 	}
 		.chart {
 			shape-rendering: crispEdges;
@@ -61,14 +61,13 @@ THE SOFTWARE.
 			font: 12px sans-serif;	
 		}
 
-		.miniItem1 {
-			fill: darksalmon;
+		.miniItem0 {
+			fill: #de6d43;
 			stroke-width: 2;
 			fill-opacity: .7;	
-			stroke: gray;
 		}
 
-		.miniItem0 {
+		.miniItem1 {
 			fill: darkolivegreen;
 			fill-opacity: .7;
 			stroke-width: 6;	
@@ -76,6 +75,12 @@ THE SOFTWARE.
 
 		.miniItem2 {
 			fill: slategray;
+			fill-opacity: .7;
+			stroke-width: 6;	
+		}
+
+		.miniItem3 {
+			fill: #414846;
 			fill-opacity: .7;
 			stroke-width: 6;	
 		}
@@ -107,14 +112,14 @@ THE SOFTWARE.
 				$scope.cardview = $('#cardview');
 
 				// get trello data and display roadmap when received
-				/*getDataFromTrello(function(cards) {
+				getDataFromTrello(function(cards) {
 					$scope.cards = cards;
-					drawRoadmapFromTrelloCards(cards,$scope.member);
-				});*/
+					drawRoadmapFromTrelloCards(cards);
+				}); 
 
 				// but lets get the roadmap working with local data first
-				$scope.cards = getDummyTrelloCards(); 	// defined in keys.js
-				drawRoadmapFromTrelloCards($scope.cards);
+				//$scope.cards = getDummyTrelloCards(); 	// defined in keys.js
+				//drawRoadmapFromTrelloCards($scope.cards);
 			})
 			
 		</script>

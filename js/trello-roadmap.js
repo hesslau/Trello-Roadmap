@@ -329,16 +329,43 @@ function drawRoadmap(lanes, items, timeBegin, timeEnd) {
 function updateCardView(card) {
 	var converter = new Markdown.Converter();
 	$scope.cardview.html(converter.makeHtml(card.desc));
+	console.log(card.idMembers)
 }
 
 function drawRoadmapFromTrelloCards(cards, timeBegin, timeEnd) {
+	var flatCards = [];
+	var lanes = [];
+
 	cards = cards.filter(function(card) {
 		return card.due;
 	}) // only use cards that have a due date
 
-	var lanes = ["4f357259497d87255b0469e3"];
-	var items = cards; 
+	// divide cards with multiple members such that
+	// each card only has one member
+	for(c in cards) {
+		card = cards[c];
+		members = card.idMembers;
+		for(m in members) {
+			member = members[m];
 
+			card.idMembers = new Array(member);
+			memberIndexInLane = lanes.indexOf(member);
+
+			if(memberIndexInLane<0) {
+				lanes.push(member);
+				card.memberIndexInLane = lanes.length-1;
+			} else {
+				card.memberIndexInLane = memberIndexInLane;
+			}
+
+			console.log(card.name, card.memberIndexInLane)
+			flatCards.push(card);
+		}
+	}
+
+	cards = flatCards;
+
+	console.log(cards.length);
 	laneLength = lanes.length
 
 	if (timeBegin == null) 
@@ -347,7 +374,6 @@ function drawRoadmapFromTrelloCards(cards, timeBegin, timeEnd) {
 		timeEnd = d3.max(cards, function(d) { return new Date(d.due); });
 
 
-	console.log(timeBegin, timeEnd);
 	var m = [20, 15, 15, 120], //top right bottom left
 		w = 960 - m[1] - m[3],
 		h = 500 - m[0] - m[2],
@@ -356,16 +382,11 @@ function drawRoadmapFromTrelloCards(cards, timeBegin, timeEnd) {
 
 
 	var memberInLanes = function(card) {
-			for (i in card.idMembers) {
-				var index = lanes.indexOf(card.idMembers[i]);
-				if(index >= 0)
-					return index;
-			}
+			return card.memberIndexInLane;
 		}
 
 	var start = function(card) {
 		return new Date(card.due).add(-10).days();
-
 	}
 
 	var end = function(card) {
@@ -384,13 +405,6 @@ function drawRoadmapFromTrelloCards(cards, timeBegin, timeEnd) {
 	var y2 = d3.scale.linear()
 		.domain([0, laneLength])
 		.range([0, miniHeight]);
-
-	var tooltip = d3.select("body")
-	.append("div")
-	.style("position", "absolute")
-	.style("z-index", "10")
-	.style("visibility", "hidden")
-	.text("a simple tooltip");
 
 	var chart = d3.select("#roadmap")
 		.append("svg")
@@ -477,7 +491,7 @@ function drawRoadmapFromTrelloCards(cards, timeBegin, timeEnd) {
 
 	//mini item rects
 	mini.append("g").selectAll("miniItems")
-		.data(items)
+		.data(cards)
 		.enter().append("rect")
 		.attr("class", function(d) {
 			return "miniItem" + memberInLanes(d);
@@ -490,16 +504,9 @@ function drawRoadmapFromTrelloCards(cards, timeBegin, timeEnd) {
 		})
 		.attr("width", function(d) {
 			var diff = x(end(d)) - x(start(d));
-			console.log(x(end(d)),x(start(d)))
 			return diff;
 		})
-		.attr("height", 10)
-		.on("mouseover", function(d){
-			tooltip.text(d.name)
-			return tooltip.style("visibility", "visible");})
-		.on("mousemove", function(){return tooltip.style("top",
-    (d3.event.pageY-10)+"px").style("left",(d3.event.pageX+10)+"px");})
-		.on("mouseout", function(){return tooltip.style("visibility", "hidden");});
+		.attr("height", 10);
 
 	//mini labels
 	/*mini.append("g").selectAll(".miniLabels")
