@@ -101,231 +101,6 @@ function getDataFromTrello(callback) {
 }
 
 
-function drawRoadmap(lanes, items, timeBegin, timeEnd) {
-	laneLength = lanes.length
-
-	if (timeBegin == null) timeBegin = 0;
-	if (timeEnd == null) timeEnd = 2000;
-
-	var m = [20, 15, 15, 120], //top right bottom left
-		w = 960 - m[1] - m[3],
-		h = 500 - m[0] - m[2],
-		miniHeight = laneLength * 12 + 50,
-		mainHeight = h - miniHeight - 50;
-
-	//scales
-	var x = d3.scale.linear()
-		.domain([timeBegin, timeEnd])
-		.range([0, w]);
-	var x1 = d3.scale.linear()
-		.range([0, w]);
-	var y1 = d3.scale.linear()
-		.domain([0, laneLength])
-		.range([0, mainHeight]);
-	var y2 = d3.scale.linear()
-		.domain([0, laneLength])
-		.range([0, miniHeight]);
-
-	var chart = d3.select("#roadmap")
-		.append("svg")
-		.attr("width", w + m[1] + m[3])
-		.attr("height", h + m[0] + m[2])
-		.attr("class", "chart");
-
-	chart.append("defs").append("clipPath")
-		.attr("id", "clip")
-		.append("rect")
-		.attr("width", w)
-		.attr("height", mainHeight);
-
-	var main = chart.append("g")
-		.attr("transform", "translate(" + m[3] + "," + m[0] + ")")
-		.attr("width", w)
-		.attr("height", mainHeight)
-		.attr("class", "main");
-
-	var mini = chart.append("g")
-		.attr("transform", "translate(" + m[3] + "," + (mainHeight + m[0]) + ")")
-		.attr("width", w)
-		.attr("height", miniHeight)
-		.attr("class", "mini");
-
-	//main lanes and texts
-	main.append("g").selectAll(".laneLines")
-		.data(items)
-		.enter().append("line")
-		.attr("x1", m[1])
-		.attr("y1", function(d) {
-			return y1(d.lane);
-		})
-		.attr("x2", w)
-		.attr("y2", function(d) {
-			return y1(d.lane);
-		})
-		.attr("stroke", "lightgray")
-
-	main.append("g").selectAll(".laneText")
-		.data(lanes)
-		.enter().append("text")
-		.text(function(d) {
-			return d;
-		})
-		.attr("x", -m[1])
-		.attr("y", function(d, i) {
-			return y1(i + .5);
-		})
-		.attr("dy", ".5ex")
-		.attr("text-anchor", "end")
-		.attr("class", "laneText");
-
-	//mini lanes and texts
-	mini.append("g").selectAll(".laneLines")
-		.data(items)
-		.enter().append("line")
-		.attr("x1", m[1])
-		.attr("y1", function(d) {
-			return y2(d.lane);
-		})
-		.attr("x2", w)
-		.attr("y2", function(d) {
-			return y2(d.lane);
-		})
-		.attr("stroke", "lightgray");
-
-	mini.append("g").selectAll(".laneText")
-		.data(lanes)
-		.enter().append("text")
-		.text(function(d) {
-			return d;
-		})
-		.attr("x", -m[1])
-		.attr("y", function(d, i) {
-			return y2(i + .5);
-		})
-		.attr("dy", ".5ex")
-		.attr("text-anchor", "end")
-		.attr("class", "laneText");
-
-	var itemRects = main.append("g")
-		.attr("clip-path", "url(#clip)");
-
-	//mini item rects
-	mini.append("g").selectAll("miniItems")
-		.data(items)
-		.enter().append("rect")
-		.attr("class", function(d) {
-			return "miniItem" + d.lane;
-		})
-		.attr("x", function(d) {
-			return x(d.start);
-		})
-		.attr("y", function(d) {
-			return y2(d.lane + .5) - 5;
-		})
-		.attr("width", function(d) {
-			return x(d.end - d.start);
-		})
-		.attr("height", 10);
-
-	//mini labels
-	mini.append("g").selectAll(".miniLabels")
-		.data(items)
-		.enter().append("text")
-		.text(function(d) {
-			return d.id;
-		})
-		.attr("x", function(d) {
-			return x(d.start);
-		})
-		.attr("y", function(d) {
-			return y2(d.lane + .5);
-		})
-		.attr("dy", ".5ex");
-
-	//brush
-	var brush = d3.svg.brush()
-		.x(x)
-		.on("brush", display);
-
-	mini.append("g")
-		.attr("class", "x brush")
-		.call(brush)
-		.selectAll("rect")
-		.attr("y", 1)
-		.attr("height", miniHeight - 1);
-
-	display();
-
-	function display() {
-		var rects, labels,
-			minExtent = brush.extent()[0],
-			maxExtent = brush.extent()[1],
-			visItems = items.filter(function(d) {
-				return d.start < maxExtent && d.end > minExtent;
-			});
-
-		mini.select(".brush")
-			.call(brush.extent([minExtent, maxExtent]));
-
-		x1.domain([minExtent, maxExtent]);
-
-		//update main item rects
-		rects = itemRects.selectAll("rect")
-			.data(visItems, function(d) {
-				return d.id;
-			})
-			.attr("x", function(d) {
-				return x1(d.start);
-			})
-			.attr("width", function(d) {
-				return x1(d.end) - x1(d.start);
-			});
-
-		rects.enter().append("rect")
-			.attr("class", function(d) {
-				return "miniItem" + d.lane;
-			})
-			.attr("x", function(d) {
-				return x1(d.start);
-			})
-			.attr("y", function(d) {
-				return y1(d.lane) + 10;
-			})
-			.attr("width", function(d) {
-				return x1(d.end) - x1(d.start);
-			})
-			.attr("height", function(d) {
-				return .8 * y1(1);
-			});
-
-		rects.exit().remove();
-
-		//update the item labels
-		labels = itemRects.selectAll("text")
-			.data(visItems, function(d) {
-				return d.id;
-			})
-			.attr("x", function(d) {
-				return x1(Math.max(d.start, minExtent) + 2);
-			});
-
-		labels.enter().append("text")
-			.text(function(d) {
-				return d.id;
-			})
-			.attr("x", function(d) {
-				return x1(Math.max(d.start, minExtent));
-			})
-			.attr("y", function(d) {
-				return y1(d.lane + .5);
-			})
-			.attr("text-anchor", "start");
-
-		labels.exit().remove();
-
-	}
-}
-
 function updateCardView(card) {
 	var converter = new Markdown.Converter();
 	$scope.cardview.html(converter.makeHtml(card.desc));
@@ -340,26 +115,26 @@ function drawRoadmapFromTrelloCards(cards, timeBegin, timeEnd) {
 		return card.due;
 	}) // only use cards that have a due date
 
-	// divide cards with multiple members such that
-	// each card only has one member
+	// seperate cards with multiple members such that
+	// each card only has one single member
 	for(c in cards) {
-		card = cards[c];
-		members = card.idMembers;
+		var card = cards[c];
+		var members = card.idMembers;
 		for(m in members) {
-			member = members[m];
+			var member = members[m];
 
 			card.idMembers = new Array(member);
 			memberIndexInLane = lanes.indexOf(member);
 
 			if(memberIndexInLane<0) {
-				lanes.push(member);
-				card.memberIndexInLane = lanes.length-1;
+				card.memberIndexInLane = lanes.push(member) - 1;
 			} else {
 				card.memberIndexInLane = memberIndexInLane;
 			}
 
-			console.log(card.name, card.memberIndexInLane)
-			flatCards.push(card);
+			// have to use a deepCopy solution so changes don't get overwritten in next iteration
+			flatCards.push(deepCopy(card));
+			
 		}
 	}
 
@@ -741,3 +516,273 @@ function getDummyData() {
 		lanes: lanes
 	};
 }
+
+function deepCopy(src) {
+var object_create = Object.create;
+	/* From http://stackoverflow.com/questions/122102/most-efficient-way-to-clone-an-object/13333781#13333781 */
+    if(src == null || typeof(src) !== 'object'){
+        return src;
+    }
+
+    //Honor native/custom clone methods
+    if(typeof src.clone == 'function'){
+        return src.clone(true);
+    }
+
+    //Special cases:
+    //Date
+    if (src instanceof Date){
+        return new Date(src.getTime());
+    }
+    //RegExp
+    if(src instanceof RegExp){
+        return new RegExp(src);
+    }
+    //DOM Elements
+    if(src.nodeType && typeof src.cloneNode == 'function'){
+        return src.cloneNode(true);
+    }
+
+    //If we've reached here, we have a regular object, array, or function
+
+    //make sure the returned object has the same prototype as the original
+    var proto = (Object.getPrototypeOf ? Object.getPrototypeOf(src): src.__proto__);
+    if (!proto) {
+        proto = src.constructor.prototype; //this line would probably only be reached by very old browsers 
+    }
+    var ret = object_create(proto);
+
+    for(var key in src){
+        //Note: this does NOT preserve ES5 property attributes like 'writable', 'enumerable', etc.
+        //That could be achieved by using Object.getOwnPropertyNames and Object.defineProperty
+        ret[key] = deepCopy(src[key]);
+    }
+    return ret;
+}
+// USE ONLY FOR REFERENCE!
+/*
+function drawRoadmap(lanes, items, timeBegin, timeEnd) {
+	laneLength = lanes.length
+
+	if (timeBegin == null) timeBegin = 0;
+	if (timeEnd == null) timeEnd = 2000;
+
+	var m = [20, 15, 15, 120], //top right bottom left
+		w = 960 - m[1] - m[3],
+		h = 500 - m[0] - m[2],
+		miniHeight = laneLength * 12 + 50,
+		mainHeight = h - miniHeight - 50;
+
+	//scales
+	var x = d3.scale.linear()
+		.domain([timeBegin, timeEnd])
+		.range([0, w]);
+	var x1 = d3.scale.linear()
+		.range([0, w]);
+	var y1 = d3.scale.linear()
+		.domain([0, laneLength])
+		.range([0, mainHeight]);
+	var y2 = d3.scale.linear()
+		.domain([0, laneLength])
+		.range([0, miniHeight]);
+
+	var chart = d3.select("#roadmap")
+		.append("svg")
+		.attr("width", w + m[1] + m[3])
+		.attr("height", h + m[0] + m[2])
+		.attr("class", "chart");
+
+	chart.append("defs").append("clipPath")
+		.attr("id", "clip")
+		.append("rect")
+		.attr("width", w)
+		.attr("height", mainHeight);
+
+	var main = chart.append("g")
+		.attr("transform", "translate(" + m[3] + "," + m[0] + ")")
+		.attr("width", w)
+		.attr("height", mainHeight)
+		.attr("class", "main");
+
+	var mini = chart.append("g")
+		.attr("transform", "translate(" + m[3] + "," + (mainHeight + m[0]) + ")")
+		.attr("width", w)
+		.attr("height", miniHeight)
+		.attr("class", "mini");
+
+	//main lanes and texts
+	main.append("g").selectAll(".laneLines")
+		.data(items)
+		.enter().append("line")
+		.attr("x1", m[1])
+		.attr("y1", function(d) {
+			return y1(d.lane);
+		})
+		.attr("x2", w)
+		.attr("y2", function(d) {
+			return y1(d.lane);
+		})
+		.attr("stroke", "lightgray")
+
+	main.append("g").selectAll(".laneText")
+		.data(lanes)
+		.enter().append("text")
+		.text(function(d) {
+			return d;
+		})
+		.attr("x", -m[1])
+		.attr("y", function(d, i) {
+			return y1(i + .5);
+		})
+		.attr("dy", ".5ex")
+		.attr("text-anchor", "end")
+		.attr("class", "laneText");
+
+	//mini lanes and texts
+	mini.append("g").selectAll(".laneLines")
+		.data(items)
+		.enter().append("line")
+		.attr("x1", m[1])
+		.attr("y1", function(d) {
+			return y2(d.lane);
+		})
+		.attr("x2", w)
+		.attr("y2", function(d) {
+			return y2(d.lane);
+		})
+		.attr("stroke", "lightgray");
+
+	mini.append("g").selectAll(".laneText")
+		.data(lanes)
+		.enter().append("text")
+		.text(function(d) {
+			return d;
+		})
+		.attr("x", -m[1])
+		.attr("y", function(d, i) {
+			return y2(i + .5);
+		})
+		.attr("dy", ".5ex")
+		.attr("text-anchor", "end")
+		.attr("class", "laneText");
+
+	var itemRects = main.append("g")
+		.attr("clip-path", "url(#clip)");
+
+	//mini item rects
+	mini.append("g").selectAll("miniItems")
+		.data(items)
+		.enter().append("rect")
+		.attr("class", function(d) {
+			return "miniItem" + d.lane;
+		})
+		.attr("x", function(d) {
+			return x(d.start);
+		})
+		.attr("y", function(d) {
+			return y2(d.lane + .5) - 5;
+		})
+		.attr("width", function(d) {
+			return x(d.end - d.start);
+		})
+		.attr("height", 10);
+
+	//mini labels
+	mini.append("g").selectAll(".miniLabels")
+		.data(items)
+		.enter().append("text")
+		.text(function(d) {
+			return d.id;
+		})
+		.attr("x", function(d) {
+			return x(d.start);
+		})
+		.attr("y", function(d) {
+			return y2(d.lane + .5);
+		})
+		.attr("dy", ".5ex");
+
+	//brush
+	var brush = d3.svg.brush()
+		.x(x)
+		.on("brush", display);
+
+	mini.append("g")
+		.attr("class", "x brush")
+		.call(brush)
+		.selectAll("rect")
+		.attr("y", 1)
+		.attr("height", miniHeight - 1);
+
+	display();
+
+	function display() {
+		var rects, labels,
+			minExtent = brush.extent()[0],
+			maxExtent = brush.extent()[1],
+			visItems = items.filter(function(d) {
+				return d.start < maxExtent && d.end > minExtent;
+			});
+
+		mini.select(".brush")
+			.call(brush.extent([minExtent, maxExtent]));
+
+		x1.domain([minExtent, maxExtent]);
+
+		//update main item rects
+		rects = itemRects.selectAll("rect")
+			.data(visItems, function(d) {
+				return d.id;
+			})
+			.attr("x", function(d) {
+				return x1(d.start);
+			})
+			.attr("width", function(d) {
+				return x1(d.end) - x1(d.start);
+			});
+
+		rects.enter().append("rect")
+			.attr("class", function(d) {
+				return "miniItem" + d.lane;
+			})
+			.attr("x", function(d) {
+				return x1(d.start);
+			})
+			.attr("y", function(d) {
+				return y1(d.lane) + 10;
+			})
+			.attr("width", function(d) {
+				return x1(d.end) - x1(d.start);
+			})
+			.attr("height", function(d) {
+				return .8 * y1(1);
+			});
+
+		rects.exit().remove();
+
+		//update the item labels
+		labels = itemRects.selectAll("text")
+			.data(visItems, function(d) {
+				return d.id;
+			})
+			.attr("x", function(d) {
+				return x1(Math.max(d.start, minExtent) + 2);
+			});
+
+		labels.enter().append("text")
+			.text(function(d) {
+				return d.id;
+			})
+			.attr("x", function(d) {
+				return x1(Math.max(d.start, minExtent));
+			})
+			.attr("y", function(d) {
+				return y1(d.lane + .5);
+			})
+			.attr("text-anchor", "start");
+
+		labels.exit().remove();
+
+	}
+}
+*/
